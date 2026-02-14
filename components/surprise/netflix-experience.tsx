@@ -43,6 +43,7 @@ interface NetflixExperienceProps {
   startDate: string
   coupleNames: { name1: string; name2: string }
   onBack: () => void
+  onAdmin?: () => void
 }
 
 /* ──────── Profile Selection ──────── */
@@ -483,6 +484,7 @@ export function NetflixExperience({
   startDate,
   coupleNames,
   onBack,
+  onAdmin,
 }: NetflixExperienceProps) {
   const [profileSelected, setProfileSelected] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null)
@@ -491,6 +493,25 @@ export function NetflixExperience({
   const [scrolled, setScrolled] = useState(false)
 
   const duration = useLoveDuration(startDate)
+  
+  // Triple click logic for Admin Panel
+  const lastClickRef = useRef(0)
+  const clickCountRef = useRef(0)
+
+  const handleSecretTrigger = () => {
+    const now = Date.now()
+    if (now - lastClickRef.current < 500) {
+      clickCountRef.current += 1
+    } else {
+      clickCountRef.current = 1
+    }
+    lastClickRef.current = now
+
+    if (clickCountRef.current === 3) {
+      onAdmin?.()
+      clickCountRef.current = 0
+    }
+  }
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 50)
@@ -608,6 +629,8 @@ export function NetflixExperience({
           </p>
           <h2
             className="text-4xl md:text-6xl lg:text-7xl font-light tracking-wider mb-2"
+            onClick={handleSecretTrigger}
+            className="text-4xl md:text-6xl lg:text-7xl font-light tracking-wider mb-2 cursor-default select-none"
             style={{ color: "hsl(0,0%,97%)" }}
           >
             {coupleNames.name1}

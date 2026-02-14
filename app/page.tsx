@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { Settings, Volume2, VolumeX } from "lucide-react"
+import { Volume2, VolumeX } from "lucide-react"
 import { FloatingParticles } from "@/components/surprise/floating-particles"
 import { Entrance } from "@/components/surprise/entrance"
 import { Journey } from "@/components/surprise/journey"
@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   viewPassword: "021267",
   adminPassword: "06042552",
   startDate: "2025-12-02",
-  musicUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", // Example MP3
+  musicUrl: "https://www.youtube.com/watch?v=OYPiXBIgvJ8", // Three Man Down - เพลงรัก
   videoUrl: "",
   name1: "Chiramet",
   name2: "Kotchrada",
@@ -128,15 +128,15 @@ export default function Page() {
 
       // 2. Photos
       const { data: photosData } = await supabase.from('gallery').select('*').order('created_at', { ascending: false })
-      if (photosData) setPhotos(photosData)
+      if (photosData && photosData.length > 0) setPhotos(photosData)
 
       // 3. Videos
       const { data: videosData } = await supabase.from('videos').select('*').order('created_at', { ascending: true })
-      if (videosData) setVideos(videosData)
+      if (videosData && videosData.length > 0) setVideos(videosData)
 
       // 4. Chapters
       const { data: chaptersData } = await supabase.from('chapters').select('*').order('created_at', { ascending: true })
-      if (chaptersData) setChapters(chaptersData)
+      if (chaptersData && chaptersData.length > 0) setChapters(chaptersData)
     }
 
     fetchData()
@@ -242,16 +242,6 @@ export default function Page() {
 
       <FloatingParticles />
 
-      {/* ⚙️ Hidden Settings Trigger (Always accessible via invisible hover on top right) */}
-      {phase !== "entrance" && (
-        <button
-          onClick={() => setShowAdmin(true)}
-          className="fixed top-4 right-4 z-50 p-2 text-white/20 hover:text-rose-500 transition-colors"
-        >
-          <Settings size={20} />
-        </button>
-      )}
-
       {/* --- Phases --- */}
       {phase === "entrance" && (
         <Entrance 
@@ -283,27 +273,33 @@ export default function Page() {
             { name: settings.profileName1, avatar: settings.profileAvatar1, color: settings.profileColor1 },
             { name: settings.profileName2, avatar: settings.profileAvatar2, color: settings.profileColor2 }
           ]} 
-          onBack={() => setPhase("journey")} 
+          onBack={() => setPhase("journey")}
+          onAdmin={() => setShowAdmin(true)}
         />
       )}
 
       {/* 🔊 Audio Control (Bottom Right) */}
       {phase !== "entrance" && (
-        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 flex items-center gap-2 md:gap-3 bg-black/60 backdrop-blur-xl p-2 md:p-3 rounded-full border border-white/10 z-[100] shadow-2xl">
-          <button 
-            onClick={() => setIsMuted(!isMuted)} 
-            className="text-rose-400 hover:text-rose-300 transition-colors"
-          >
-            {isMuted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
-          </button>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            className="w-20 md:w-32 accent-rose-500 h-1 cursor-pointer bg-white/20 rounded-lg appearance-none"
-          />
+        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-[100] group">
+          <div className="flex items-center gap-2 bg-black/20 backdrop-blur-md border border-white/10 p-2 md:p-3 rounded-full shadow-2xl transition-all duration-300 hover:bg-black/40 hover:pr-4">
+            <button 
+              onClick={() => setIsMuted(!isMuted)} 
+              className="text-rose-400 hover:text-rose-300 transition-colors relative z-10"
+            >
+              {isMuted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
+            </button>
+            
+            <div className="w-0 overflow-hidden group-hover:w-24 md:group-hover:w-32 transition-all duration-300 ease-out">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={(e) => setVolume(Number(e.target.value))}
+                className="w-full accent-rose-500 h-1 cursor-pointer bg-white/20 rounded-lg appearance-none"
+              />
+            </div>
+          </div>
         </div>
       )}
 
