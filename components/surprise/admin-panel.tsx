@@ -10,9 +10,11 @@ import {
   Settings,
   BookOpen,
   Save,
+  Music,
 } from "lucide-react"
 import type { PhotoItem } from "./photo-gallery"
 import type { VideoItem } from "./netflix-experience"
+import { supabase } from "@/lib/supabaseClient"
 
 interface StoryChapter {
   id: string
@@ -25,6 +27,8 @@ interface SiteSettings {
   viewPassword: string
   adminPassword: string
   startDate: string
+  musicUrl: string
+  videoUrl?: string
   name1: string
   name2: string
   profileName1: string
@@ -62,6 +66,7 @@ export function AdminPanel({
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>("photos")
   const [localSettings, setLocalSettings] = useState<SiteSettings>(settings)
+  const [isUploading, setIsUploading] = useState(false)
 
   const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "photos", label: "รูปภาพ", icon: <ImageIcon className="w-4 h-4" /> },
@@ -71,13 +76,46 @@ export function AdminPanel({
   ]
 
   const inputClass =
-    "w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-primary/50 transition-colors"
+    "w-full px-4 py-3 md:py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-foreground placeholder:text-muted-foreground text-base md:text-sm focus:outline-none focus:border-primary/50 transition-colors"
   const labelClass = "block text-xs text-muted-foreground mb-1.5 font-light"
 
+  // Helper to upload file to Supabase Storage
+  const uploadFile = async (file: File, bucket: string) => {
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage.from(bucket).upload(fileName, file)
+      
+      if (uploadError) throw uploadError
+      
+      const { data } = supabase.storage.from(bucket).getPublicUrl(fileName)
+      return data.publicUrl
+    } catch (error: any) {
+      alert(`Upload failed: ${error.message}`)
+      return null
+    }
+  }
+
+  // Function to save settings (Music & Video URLs)
+  const handleSaveSettings = async () => {
+    setIsUploading(true)
+    try {
+      const { error } = await supabase.from('site_settings').upsert({ id: 1, data: localSettings })
+      if (error) throw error
+      
+      alert("บันทึกการตั้งค่าเรียบร้อยแล้ว!")
+      onUpdateSettings(localSettings)
+    } catch (error: any) {
+      alert("เกิดข้อผิดพลาด: " + error.message)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 sm:p-4" style={{ zIndex: 50 }}>
+    <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center sm:p-4" style={{ zIndex: 50 }}>
       <div
-        className="glass-strong rounded-2xl w-full max-w-sm sm:max-w-md md:max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden"
+        className="glass-strong rounded-t-2xl sm:rounded-2xl w-full h-[85vh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] flex flex-col overflow-hidden transition-all"
         style={{ boxShadow: "0 0 60px rgba(0,0,0,0.5)" }}
       >
         {/* Header */}
@@ -110,16 +148,15 @@ export function AdminPanel({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 pb-10 sm:pb-5">
           {/* Photos Tab */}
           {activeTab === "photos" && (
             <div className="flex flex-col gap-4">
               <button
-                onClick={() =>
-                  onUpdatePhotos([
-                    ...photos,
-                    { id: Date.now().toString(), src: "", caption: "" },
-                  ])
+                onClick={async () => {
+                  // Create empty placeholder in DB
+                  await supabase.from('gallery').insert([{ src: "", caption: "" }])
+                }
                 }
                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all hover:opacity-90"
                 style={{
@@ -134,7 +171,7 @@ export function AdminPanel({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{"รูปที่"} {i + 1}</span>
                     <button
-                      onClick={() => onUpdatePhotos(photos.filter((_, idx) => idx !== i))}
+                      onClick={() => supabase.from('gallery').delete().eq('id', photo.id)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -146,19 +183,21 @@ export function AdminPanel({
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0]
                           if (file) {
-                            const reader = new FileReader()
-                            reader.onload = (event) => {
-                              const updated = [...photos]
-                              updated[i] = { ...updated[i], src: event.target?.result as string }
-                              onUpdatePhotos(updated)
+                            setIsUploading(true)
+                            try {
+                              const publicUrl = await uploadFile(file, 'memories')
+                              if (publicUrl) {
+                                await supabase.from('gallery').update({ src: publicUrl }).eq('id', photo.id)
+                              }
+                            } finally {
+                              setIsUploading(false)
                             }
-                            reader.readAsDataURL(file)
                           }
                         }}
-                        className="flex-1 px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-foreground text-sm file:mr-3 file:bg-[hsl(350,60%,55%)] file:text-white file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:text-xs cursor-pointer"
+                        className="flex-1 px-3 py-3 md:py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-foreground text-sm file:mr-3 file:bg-[hsl(350,60%,55%)] file:text-white file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:text-xs cursor-pointer"
                       />
                       {photo.src && (
                         <img src={photo.src} alt="Preview" className="w-10 h-10 rounded object-cover" />
@@ -170,10 +209,10 @@ export function AdminPanel({
                     <input
                       type="text"
                       value={photo.caption || ""}
-                      onChange={(e) => {
-                        const updated = [...photos]
-                        updated[i] = { ...updated[i], caption: e.target.value }
-                        onUpdatePhotos(updated)
+                      onChange={(e) => { 
+                        // For text inputs, we might want to debounce, but for simplicity we update local state via parent or just trigger DB update on blur/change
+                        // Here we trigger DB update immediately (Real-time)
+                        supabase.from('gallery').update({ caption: e.target.value }).eq('id', photo.id)
                       }}
                       placeholder="วันที่เราเจอกัน..."
                       className={inputClass}
@@ -193,18 +232,14 @@ export function AdminPanel({
           {activeTab === "videos" && (
             <div className="flex flex-col gap-4">
               <button
-                onClick={() =>
-                  onUpdateVideos([
-                    ...videos,
-                    {
-                      id: Date.now().toString(),
+                onClick={() => 
+                  supabase.from('videos').insert([{
                       title: "",
                       description: "",
                       thumbnail: "",
                       videoUrl: "",
                       category: "Our Collection",
-                    },
-                  ])
+                  }])
                 }
                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all hover:opacity-90"
                 style={{
@@ -219,7 +254,7 @@ export function AdminPanel({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{"วิดีโอที่"} {i + 1}</span>
                     <button
-                      onClick={() => onUpdateVideos(videos.filter((_, idx) => idx !== i))}
+                      onClick={() => supabase.from('videos').delete().eq('id', video.id)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -231,9 +266,7 @@ export function AdminPanel({
                       type="text"
                       value={video.title}
                       onChange={(e) => {
-                        const updated = [...videos]
-                        updated[i] = { ...updated[i], title: e.target.value }
-                        onUpdateVideos(updated)
+                        supabase.from('videos').update({ title: e.target.value }).eq('id', video.id)
                       }}
                       placeholder="วิดีโอของเรา"
                       className={inputClass}
@@ -245,9 +278,7 @@ export function AdminPanel({
                       type="text"
                       value={video.description || ""}
                       onChange={(e) => {
-                        const updated = [...videos]
-                        updated[i] = { ...updated[i], description: e.target.value }
-                        onUpdateVideos(updated)
+                        supabase.from('videos').update({ description: e.target.value }).eq('id', video.id)
                       }}
                       placeholder="เรื่องราวสุดพิเศษ..."
                       className={inputClass}
@@ -258,13 +289,18 @@ export function AdminPanel({
                     <input
                       type="file"
                       accept="video/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files?.[0]
                         if (file) {
-                          const url = URL.createObjectURL(file)
-                          const updated = [...videos]
-                          updated[i] = { ...updated[i], videoUrl: url }
-                          onUpdateVideos(updated)
+                          setIsUploading(true)
+                          try {
+                            const publicUrl = await uploadFile(file, 'videos')
+                            if (publicUrl) {
+                              await supabase.from('videos').update({ videoUrl: publicUrl }).eq('id', video.id)
+                            }
+                          } finally {
+                            setIsUploading(false)
+                          }
                         }
                       }}
                       className="w-full px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-foreground text-sm file:mr-3 file:bg-[hsl(350,60%,55%)] file:text-white file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:text-xs cursor-pointer"
@@ -276,16 +312,18 @@ export function AdminPanel({
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0]
                           if (file) {
-                            const reader = new FileReader()
-                            reader.onload = (event) => {
-                              const updated = [...videos]
-                              updated[i] = { ...updated[i], thumbnail: event.target?.result as string }
-                              onUpdateVideos(updated)
+                            setIsUploading(true)
+                            try {
+                              const publicUrl = await uploadFile(file, 'memories')
+                              if (publicUrl) {
+                                await supabase.from('videos').update({ thumbnail: publicUrl }).eq('id', video.id)
+                              }
+                            } finally {
+                              setIsUploading(false)
                             }
-                            reader.readAsDataURL(file)
                           }
                         }}
                         className="flex-1 px-3 py-2.5 rounded-lg bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-foreground text-sm file:mr-3 file:bg-[hsl(350,60%,55%)] file:text-white file:border-0 file:px-2 file:py-1 file:rounded file:cursor-pointer file:text-xs cursor-pointer"
@@ -301,9 +339,7 @@ export function AdminPanel({
                       type="text"
                       value={video.category || ""}
                       onChange={(e) => {
-                        const updated = [...videos]
-                        updated[i] = { ...updated[i], category: e.target.value }
-                        onUpdateVideos(updated)
+                        supabase.from('videos').update({ category: e.target.value }).eq('id', video.id)
                       }}
                       placeholder="Our Collection"
                       className={inputClass}
@@ -323,11 +359,7 @@ export function AdminPanel({
           {activeTab === "chapters" && (
             <div className="flex flex-col gap-4">
               <button
-                onClick={() =>
-                  onUpdateChapters([
-                    ...chapters,
-                    { id: Date.now().toString(), title: "", text: "", side: "left" },
-                  ])
+                onClick={() => supabase.from('chapters').insert([{ title: "", text: "", side: "left" }])
                 }
                 className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all hover:opacity-90"
                 style={{
@@ -342,7 +374,7 @@ export function AdminPanel({
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">{"บทที่"} {i + 1}</span>
                     <button
-                      onClick={() => onUpdateChapters(chapters.filter((_, idx) => idx !== i))}
+                      onClick={() => supabase.from('chapters').delete().eq('id', chapter.id)}
                       className="text-muted-foreground hover:text-destructive transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -354,9 +386,7 @@ export function AdminPanel({
                       type="text"
                       value={chapter.title}
                       onChange={(e) => {
-                        const updated = [...chapters]
-                        updated[i] = { ...updated[i], title: e.target.value }
-                        onUpdateChapters(updated)
+                        supabase.from('chapters').update({ title: e.target.value }).eq('id', chapter.id)
                       }}
                       placeholder="วันแรกที่เราเจอกัน"
                       className={inputClass}
@@ -367,9 +397,7 @@ export function AdminPanel({
                     <textarea
                       value={chapter.text}
                       onChange={(e) => {
-                        const updated = [...chapters]
-                        updated[i] = { ...updated[i], text: e.target.value }
-                        onUpdateChapters(updated)
+                        supabase.from('chapters').update({ text: e.target.value }).eq('id', chapter.id)
                       }}
                       placeholder="เล่าเรื่องราวที่เกิดขึ้น..."
                       className={`${inputClass} min-h-[80px] resize-y`}
@@ -380,9 +408,7 @@ export function AdminPanel({
                     <select
                       value={chapter.side}
                       onChange={(e) => {
-                        const updated = [...chapters]
-                        updated[i] = { ...updated[i], side: e.target.value as "left" | "right" | "center" }
-                        onUpdateChapters(updated)
+                        supabase.from('chapters').update({ side: e.target.value }).eq('id', chapter.id)
                       }}
                       className={inputClass}
                     >
@@ -442,6 +468,34 @@ export function AdminPanel({
                     onChange={(e) => setLocalSettings({ ...localSettings, startDate: e.target.value })}
                     className={inputClass}
                   />
+                </div>
+              </div>
+
+              <div className="glass rounded-xl p-4 flex flex-col gap-3">
+                <h3 className="text-sm font-medium" style={{ color: "hsl(350, 40%, 80%)" }}>
+                  {"เพลงพื้นหลัง (MP3)"}
+                </h3>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className={labelClass}>{"URL เพลง (YouTube หรือ MP3)"}</label>
+                    <input
+                      type="text"
+                      value={localSettings.musicUrl || ""}
+                      onChange={(e) => setLocalSettings({ ...localSettings, musicUrl: e.target.value })}
+                      placeholder="https://youtu.be/..."
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>{"URL วิดีโอหลัก (หน้า Netflix)"}</label>
+                  <input
+                    type="text"
+                    value={localSettings.videoUrl || ""}
+                    onChange={(e) => setLocalSettings({ ...localSettings, videoUrl: e.target.value })}
+                    placeholder="https://..."
+                    className={inputClass}
+                  />
+                  </div>
                 </div>
               </div>
 
@@ -514,14 +568,21 @@ export function AdminPanel({
               </div>
 
               <button
-                onClick={() => onUpdateSettings(localSettings)}
-                className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90"
+                onClick={handleSaveSettings}
+                disabled={isUploading}
+                className="flex items-center justify-center gap-2 px-6 py-3.5 md:py-3 rounded-xl text-base md:text-sm font-medium transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                 style={{
                   background: "linear-gradient(135deg, hsl(350, 60%, 45%), hsl(345, 70%, 30%))",
                   color: "hsl(350, 40%, 90%)",
                 }}
               >
-                <Save className="w-4 h-4" /> {"บันทึกการตั้งค่า"}
+                {isUploading ? (
+                  <span className="animate-pulse">{"กำลังบันทึก..."}</span>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" /> {"บันทึกการตั้งค่า"}
+                  </>
+                )}
               </button>
             </div>
           )}

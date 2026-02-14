@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, ZoomIn, Hand } from "lucide-react"
 import Image from "next/image"
+import { motion, useMotionValue, useSpring, useTransform, PanInfo, AnimatePresence } from "framer-motion"
 
 export interface PhotoItem {
   id: string
@@ -18,9 +19,6 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [visibleItems, setVisibleItems] = useState<Set<number>>(new Set())
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -42,28 +40,6 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
     return () => observer.disconnect()
   }, [photos.length])
 
-  const checkScroll = useCallback(() => {
-    const el = containerRef.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 10)
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
-  }, [])
-
-  useEffect(() => {
-    checkScroll()
-    const el = containerRef.current
-    el?.addEventListener("scroll", checkScroll)
-    window.addEventListener("resize", checkScroll)
-    return () => {
-      el?.removeEventListener("scroll", checkScroll)
-      window.removeEventListener("resize", checkScroll)
-    }
-  }, [checkScroll])
-
-  const scroll = (dir: "left" | "right") => {
-    containerRef.current?.scrollBy({ left: dir === "left" ? -300 : 300, behavior: "smooth" })
-  }
-
   if (photos.length === 0) {
     return (
       <div className="text-center py-16 px-4 text-muted-foreground font-light">
@@ -79,7 +55,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
         <div className="relative mb-8">
           {/* Title */}
           <h2
-            className="text-3xl md:text-4xl font-light text-center mb-3"
+            className="text-2xl md:text-4xl font-light text-center mb-3"
             style={{ color: "hsl(350, 40%, 85%)" }}
           >
             {"ความทรงจำของเรา"}
@@ -103,46 +79,20 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
       </div>
 
       {/* Gallery Container */}
-      <div className="relative px-4 md:px-8 max-w-6xl mx-auto">
-        {/* Left scroll button */}
-        {canScrollLeft && (
-          <button
-            onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 glass rounded-full p-2 md:p-3 text-foreground/70 hover:text-foreground transition-all hover:bg-[rgba(220,120,140,0.2)]"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
-          </button>
-        )}
-
-        {/* Right scroll button */}
-        {canScrollRight && (
-          <button
-            onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 glass rounded-full p-2 md:p-3 text-foreground/70 hover:text-foreground transition-all hover:bg-[rgba(220,120,140,0.2)]"
-            aria-label="Scroll right"
-          >
-            <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
-          </button>
-        )}
-
-        {/* Carousel */}
-        <div
-          ref={containerRef}
-          className="flex gap-4 md:gap-6 overflow-x-auto scroll-smooth px-12 md:px-14"
-          style={{ scrollbarWidth: "none", scrollBehavior: "smooth" }}
-        >
+      <div className="relative px-4 md:px-8 max-w-6xl mx-auto pb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
           {photos.map((photo, i) => (
             <div
               key={photo.id}
               ref={(el) => { itemRefs.current[i] = el }}
               data-index={i}
-              className={`group relative flex-shrink-0 w-[220px] sm:w-[260px] md:w-[300px] aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer transition-all duration-500 ${
+              className={`group relative aspect-[3/4] rounded-xl overflow-hidden cursor-pointer transition-all duration-700 ${
                 visibleItems.has(i) ? "opacity-100 scale-100" : "opacity-0 scale-95"
-              } hover:scale-105 hover:shadow-2xl`}
+              } hover:scale-105 hover:shadow-2xl hover:z-10`}
               style={{
-                transitionDelay: `${(i % 3) * 100}ms`,
-                boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+                transitionDelay: `${(i % 4) * 100}ms`,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+                border: "4px solid rgba(255,255,255,0.05)"
               }}
               onClick={() => setSelectedIndex(i)}
             >
@@ -152,11 +102,18 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
                 alt={photo.caption || `Memory ${i + 1}`}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-110"
-                sizes="(max-width: 640px) 220px, (max-width: 768px) 260px, 300px"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               />
 
               {/* Overlay gradient */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Zoom Icon */}
+              <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                <div className="bg-black/40 backdrop-blur-sm p-1.5 rounded-full text-white/90">
+                  <ZoomIn className="w-4 h-4" />
+                </div>
+              </div>
 
               {/* Caption and details */}
               {photo.caption && (
@@ -166,35 +123,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
                   </p>
                 </div>
               )}
-
-              {/* Top accent bar */}
-              <div
-                className="absolute top-0 left-0 right-0 h-1"
-                style={{
-                  background: "linear-gradient(90deg, hsl(350, 60%, 55%), hsl(350, 60%, 45%))",
-                  opacity: 0.8,
-                }}
-              />
             </div>
-          ))}
-        </div>
-
-        {/* Bottom indicator dots */}
-        <div className="flex justify-center gap-2 mt-8">
-          {Array.from({ length: Math.min(photos.length, 5) }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                const idx = Math.min(i * 2, photos.length - 1)
-                setSelectedIndex(idx)
-              }}
-              className="w-2 h-2 rounded-full transition-all"
-              style={{
-                backgroundColor: i === 0 ? "hsl(350, 60%, 55%)" : "hsl(350, 40%, 30%)",
-                transform: i === 0 ? "scale(1.3)" : "scale(1)",
-              }}
-              aria-label={`Go to photo set ${i + 1}`}
-            />
           ))}
         </div>
       </div>
@@ -260,8 +189,58 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
               </p>
             )}
           </div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// Helper Component for Individual Cards
+function CarouselItem({ photo, index, activeIndex, onClick }: { photo: PhotoItem, index: number, activeIndex: number, onClick: () => void }) {
+  const isActive = index === activeIndex
+  const distance = Math.abs(index - activeIndex)
+  
+  // Calculate styles based on distance from center
+  const scale = isActive ? 1.1 : Math.max(0.8, 1 - distance * 0.1)
+  const opacity = isActive ? 1 : Math.max(0.3, 1 - distance * 0.3)
+  const rotateY = (index - activeIndex) * 5 // Slight rotation for "Curved" feel
+  const zIndex = 10 - distance
+
+  return (
+    <motion.div
+      className="relative flex-shrink-0 rounded-2xl overflow-hidden shadow-2xl cursor-pointer bg-black/20"
+      style={{
+        width: typeof window !== 'undefined' && window.innerWidth < 768 ? 220 : 280,
+        height: typeof window !== 'undefined' && window.innerWidth < 768 ? 320 : 400,
+        scale,
+        opacity,
+        zIndex,
+        rotateY,
+        perspective: 1000,
+        border: isActive ? "2px solid rgba(220, 120, 140, 0.5)" : "1px solid rgba(255,255,255,0.05)",
+      }}
+      animate={{ scale, opacity, rotateY, zIndex }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      onClick={onClick}
+    >
+      <Image
+        src={photo.src}
+        alt={photo.caption || "Memory"}
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 220px, 280px"
+        draggable={false}
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+      
+      {photo.caption && isActive && (
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <p className="text-white text-sm font-light line-clamp-2 text-center">
+            {photo.caption}
+          </p>
         </div>
       )}
-    </>
+    </motion.div>
   )
 }

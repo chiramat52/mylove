@@ -78,7 +78,7 @@ export function Journey({ startDate, photos, chapters, coupleNames, onContinue }
             {"เรื่องราวของ"}
           </p>
           <h1
-            className="text-4xl md:text-6xl lg:text-7xl font-light tracking-wider mb-4"
+            className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-light tracking-wider mb-4"
             style={{ color: "hsl(350, 40%, 80%)" }}
           >
             {coupleNames.name1}
@@ -131,7 +131,7 @@ export function Journey({ startDate, photos, chapters, coupleNames, onContinue }
         <div className="relative max-w-3xl mx-auto">
           <ScrollReveal>
             <h2
-              className="text-center text-lg tracking-[0.3em] uppercase mb-16 font-light"
+              className="text-center text-base md:text-lg tracking-[0.3em] uppercase mb-12 md:mb-16 font-light"
               style={{ color: "hsl(350, 40%, 70%)" }}
             >
               {"เรื่องราวของเรา"}
@@ -144,7 +144,7 @@ export function Journey({ startDate, photos, chapters, coupleNames, onContinue }
             style={{ backgroundColor: "hsl(350, 40%, 20%)" }}
           />
 
-          <div className="flex flex-col gap-16 md:gap-24">
+          <div className="flex flex-col gap-12 md:gap-24">
             {chapters.map((chapter, i) => (
               <ScrollReveal
                 key={chapter.id}
@@ -152,7 +152,7 @@ export function Journey({ startDate, photos, chapters, coupleNames, onContinue }
                 delay={i * 100}
               >
                 <div
-                  className={`relative md:w-[45%] ${
+                  className={`relative w-full md:w-[45%] p-6 md:p-0 glass md:bg-transparent rounded-xl md:rounded-none ${
                     chapter.side === "right"
                       ? "md:ml-auto md:text-left"
                       : chapter.side === "center"
@@ -175,7 +175,7 @@ export function Journey({ startDate, photos, chapters, coupleNames, onContinue }
                   />
 
                   <h3
-                    className="text-xl md:text-2xl font-light mb-3 tracking-wide"
+                    className="text-xl md:text-2xl font-light mb-2 md:mb-3 tracking-wide"
                     style={{ color: "hsl(350, 40%, 80%)" }}
                   >
                     {chapter.title}
@@ -202,7 +202,7 @@ export function Journey({ startDate, photos, chapters, coupleNames, onContinue }
         <div className="relative">
           <ScrollReveal>
             <h2
-              className="text-center text-lg tracking-[0.3em] uppercase mb-12 font-light"
+              className="text-center text-base md:text-lg tracking-[0.3em] uppercase mb-8 md:mb-12 font-light"
               style={{ color: "hsl(350, 40%, 70%)" }}
             >
               {"ความทรงจำของเรา"}
