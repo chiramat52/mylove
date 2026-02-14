@@ -49,7 +49,7 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
   }
 
   return (
-    <>
+    <div className="w-full">
       {/* Header Section */}
       <div className="px-4 md:px-8 max-w-6xl mx-auto mb-12">
         <div className="relative mb-8">
@@ -129,68 +129,72 @@ export function PhotoGallery({ photos }: PhotoGalleryProps) {
       </div>
 
       {/* Lightbox */}
-      {selectedIndex !== null && (
-        <div
-          className="fixed inset-0 bg-black/95 flex items-center justify-center"
-          style={{ zIndex: 50 }}
-          onClick={() => setSelectedIndex(null)}
-        >
-          <button
+      <AnimatePresence>
+        {selectedIndex !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 flex items-center justify-center"
+            style={{ zIndex: 50 }}
             onClick={() => setSelectedIndex(null)}
-            className="absolute top-6 right-6 text-foreground/70 hover:text-foreground transition-colors"
-            aria-label="Close"
           >
-            <X className="w-6 h-6" />
-          </button>
-
-          {selectedIndex > 0 && (
             <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedIndex(selectedIndex - 1)
-              }}
-              className="absolute left-4 text-foreground/70 hover:text-foreground transition-colors"
-              aria-label="Previous"
+              onClick={() => setSelectedIndex(null)}
+              className="absolute top-6 right-6 text-foreground/70 hover:text-foreground transition-colors"
+              aria-label="Close"
             >
-              <ChevronLeft className="w-8 h-8" />
+              <X className="w-6 h-6" />
             </button>
-          )}
 
-          {selectedIndex < photos.length - 1 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedIndex(selectedIndex + 1)
-              }}
-              className="absolute right-4 text-foreground/70 hover:text-foreground transition-colors"
-              aria-label="Next"
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
-          )}
-
-          <div
-            className="relative max-w-4xl max-h-[85vh] w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Image
-              src={photos[selectedIndex].src}
-              alt={photos[selectedIndex].caption || "Photo"}
-              width={1200}
-              height={800}
-              className="object-contain w-full h-full max-h-[80vh] rounded-lg animate-netflix-zoom"
-            />
-            {photos[selectedIndex].caption && (
-              <p
-                className="text-center mt-4 text-sm font-light"
-                style={{ color: "hsl(350, 40%, 80%)" }}
+            {selectedIndex > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedIndex(selectedIndex - 1)
+                }}
+                className="absolute left-4 text-foreground/70 hover:text-foreground transition-colors"
+                aria-label="Previous"
               >
-                {photos[selectedIndex].caption}
-              </p>
+                <ChevronLeft className="w-8 h-8" />
+              </button>
             )}
-          </div>
-        </motion.div>
-      )}
+
+            {selectedIndex < photos.length - 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedIndex(selectedIndex + 1)
+                }}
+                className="absolute right-4 text-foreground/70 hover:text-foreground transition-colors"
+                aria-label="Next"
+              >
+                <ChevronRight className="w-8 h-8" />
+              </button>
+            )}
+
+            <div
+              className="relative max-w-4xl max-h-[85vh] w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image
+                src={photos[selectedIndex].src}
+                alt={photos[selectedIndex].caption || "Photo"}
+                width={1200}
+                height={800}
+                className="object-contain w-full h-full max-h-[80vh] rounded-lg animate-netflix-zoom"
+              />
+              {photos[selectedIndex].caption && (
+                <p
+                  className="text-center mt-4 text-sm font-light"
+                  style={{ color: "hsl(350, 40%, 80%)" }}
+                >
+                  {photos[selectedIndex].caption}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   )
