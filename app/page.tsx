@@ -164,15 +164,16 @@ export default function Page() {
       {/* Particles always visible */}
       <FloatingParticles />
 
-      {/* Admin toggle - triple-click anywhere to show admin */}
+      {/* Admin toggle - always visible on user side */}
       {phase !== "entrance" && (
         <button
           onClick={() => setShowAdmin(true)}
-          className="fixed top-4 right-4 glass rounded-full p-2.5 text-muted-foreground hover:text-foreground transition-colors opacity-0 hover:opacity-60"
+          className="fixed top-4 right-4 md:top-6 md:right-6 glass rounded-full p-2.5 md:p-3 text-foreground/60 hover:text-foreground transition-all hover:bg-[rgba(220,120,140,0.2)] duration-300"
           style={{ zIndex: 25 }}
           aria-label="Admin Settings"
+          title="Admin Settings"
         >
-          <Settings className="w-5 h-5" />
+          <Settings className="w-5 h-5 md:w-6 md:h-6" />
         </button>
       )}
 

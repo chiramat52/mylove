@@ -75,14 +75,14 @@ export function AdminPanel({
   const labelClass = "block text-xs text-muted-foreground mb-1.5 font-light"
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4" style={{ zIndex: 50 }}>
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 sm:p-4" style={{ zIndex: 50 }}>
       <div
-        className="glass-strong rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="glass-strong rounded-2xl w-full max-w-sm sm:max-w-md md:max-w-2xl max-h-[85vh] sm:max-h-[90vh] flex flex-col overflow-hidden"
         style={{ boxShadow: "0 0 60px rgba(0,0,0,0.5)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[rgba(255,255,255,0.08)]">
-          <h2 className="text-lg font-medium" style={{ color: "hsl(350, 40%, 80%)" }}>
+        <div className="flex items-center justify-between p-4 md:p-5 border-b border-[rgba(255,255,255,0.08)]">
+          <h2 className="text-base md:text-lg font-medium" style={{ color: "hsl(350, 40%, 80%)" }}>
             Admin Panel
           </h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -91,12 +91,12 @@ export function AdminPanel({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-[rgba(255,255,255,0.08)]">
+        <div className="flex border-b border-[rgba(255,255,255,0.08)] overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-3 text-xs font-medium transition-colors ${
+              className={`flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-3 text-[11px] sm:text-xs font-medium transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? "border-b-2 text-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -110,7 +110,7 @@ export function AdminPanel({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5">
           {/* Photos Tab */}
           {activeTab === "photos" && (
             <div className="flex flex-col gap-4">
